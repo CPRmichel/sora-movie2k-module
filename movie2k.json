@@ -1,0 +1,23 @@
+{
+  "sourceName": "Movie2k",
+  "iconUrl": "https://movie2k.cx/img/favicon.png",
+  "author": {
+    "name": "shadowbroker",
+    "icon": "https://movie2k.cx/img/favicon.png"
+  },
+  "version": "0.1.0",
+  "language": "German",
+  "streamType": "MP4",
+  "quality": "1080p - 720p - DVD - CAM",
+  "baseUrl": "https://movie2k.cx/",
+  "searchBaseUrl": "https://movie2k.cx/search?q=%s",
+  "scriptUrl": "https://raw.githubusercontent.com/REPLACE_ME/sora-movie2k-module/main/movie2k.js",
+  "asyncJS": true,
+  "type": "shows/movies",
+  "downloadSupport": false,
+  "supportsSora": true,
+  "supportsLuna": true,
+  "supportsTsumi": true,
+  "supportsHiyoku": true,
+  "note": "Supports movies and TV shows. Replace scriptUrl with your hosted raw file before adding the module in Sora."
+}
