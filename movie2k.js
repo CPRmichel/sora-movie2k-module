@@ -96,7 +96,7 @@ async function extractEpisodes(url) {
       return JSON.stringify([
         {
           href: cleanUrl,
-          number: "1"
+          number: "Movie"
         }
       ]);
     }
@@ -175,11 +175,52 @@ async function extractStreamUrl(url) {
       });
     }
 
-    return JSON.stringify({ streams: resolved });
+    if (!resolved.length) {
+      return null;
+    }
+
+    resolved.sort(function(a, b) {
+      return scoreResolvedStream(b) - scoreResolvedStream(a);
+    });
+
+    console.log("Selected stream: " + resolved[0].link);
+    return resolved[0].link;
   } catch (error) {
     console.log("extractStreamUrl error: " + error.message);
-    return JSON.stringify({ streams: [] });
+    return null;
   }
+}
+
+function scoreResolvedStream(stream) {
+  let score = 0;
+  const provider = String(stream.provider || "").toLowerCase();
+  const link = String(stream.link || "").toLowerCase();
+
+  if (provider.indexOf("vidoza") !== -1) {
+    score += 100;
+  } else if (provider.indexOf("voe") !== -1) {
+    score += 95;
+  } else if (provider.indexOf("dood") !== -1) {
+    score += 80;
+  } else if (provider.indexOf("vidnest") !== -1) {
+    score += 70;
+  } else if (provider.indexOf("vinovo") !== -1) {
+    score += 60;
+  }
+
+  if (link.indexOf(".m3u8") !== -1) {
+    score += 20;
+  }
+
+  if (link.indexOf(".mp4") !== -1) {
+    score += 15;
+  }
+
+  if (link.indexOf("/e/") === -1 && link.indexOf("/embed-") === -1) {
+    score += 10;
+  }
+
+  return score;
 }
 
 function isSeriesPage(html, url) {
