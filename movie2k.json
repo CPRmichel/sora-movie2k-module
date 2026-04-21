@@ -11,7 +11,7 @@
   "quality": "1080p - 720p - DVD - CAM",
   "baseUrl": "https://movie2k.cx/",
   "searchBaseUrl": "https://movie2k.cx/search?q=%s",
-  "scriptUrl": "https://raw.githubusercontent.com/REPLACE_ME/sora-movie2k-module/main/movie2k.js",
+  "scriptUrl": "https://raw.githubusercontent.com/CPRmichel/sora-movie2k-module/main/movie2k.js",
   "asyncJS": true,
   "type": "shows/movies",
   "downloadSupport": false,
@@ -19,5 +19,5 @@
   "supportsLuna": true,
   "supportsTsumi": true,
   "supportsHiyoku": true,
-  "note": "Supports movies and TV shows. Replace scriptUrl with your hosted raw file before adding the module in Sora."
+  "note": "Supports movies and TV shows."
 }
