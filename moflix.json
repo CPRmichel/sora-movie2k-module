@@ -1,0 +1,23 @@
+{
+  "sourceName": "Moflix",
+  "iconUrl": "https://moflix-stream.xyz/favicon/icon-144x144.png",
+  "author": {
+    "name": "shadowbroker",
+    "icon": "https://moflix-stream.xyz/favicon/icon-144x144.png"
+  },
+  "version": "0.1.0",
+  "language": "German",
+  "streamType": "MP4",
+  "quality": "1080p",
+  "baseUrl": "https://moflix-stream.xyz/",
+  "searchBaseUrl": "https://moflix-stream.xyz/search/%s",
+  "scriptUrl": "https://raw.githubusercontent.com/CPRmichel/sora-movie2k-module/main/moflix.js",
+  "asyncJS": true,
+  "type": "shows/movies",
+  "downloadSupport": false,
+  "supportsSora": true,
+  "supportsLuna": true,
+  "supportsTsumi": true,
+  "supportsHiyoku": true,
+  "note": "Search, movie details, series episodes and watch-page mirrors for Moflix."
+}
