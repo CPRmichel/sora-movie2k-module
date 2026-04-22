@@ -440,6 +440,28 @@ function extractDirectUrlFromHtml(html) {
     }
   }
 
+  const packedMatch = String(html || "").match(
+    /<script[^>]*>\s*(eval\(function\(p,a,c,k,e,d.*?\))\s*<\/script>/is
+  );
+  if (packedMatch && packedMatch[1]) {
+    try {
+      const unpackedScript = unpack(packedMatch[1]);
+      for (let i = 0; i < patterns.length; i += 1) {
+        const match = unpackedScript.match(patterns[i]);
+        if (!match) {
+          continue;
+        }
+
+        const candidate = absolutizeUrl(decodeJsString(match[1] || match[0]));
+        if (candidate && isDirectMediaUrl(candidate)) {
+          return candidate;
+        }
+      }
+    } catch (error) {
+      console.log("extractDirectUrlFromHtml unpack error: " + error.message);
+    }
+  }
+
   return null;
 }
 
@@ -456,10 +478,14 @@ function scoreStream(stream) {
     score += 110;
   }
 
+  if (!isDirectMediaUrl(link)) {
+    score -= 100;
+  }
+
   if (provider.indexOf("veev") !== -1) {
-    score += 90;
+    score += 20;
   } else if (provider.indexOf("vidara") !== -1) {
-    score += 85;
+    score += 15;
   } else if (provider.indexOf("moflix-stream.click") !== -1) {
     score += 80;
   } else if (provider.indexOf("moflix-stream.link") !== -1) {
@@ -600,4 +626,75 @@ function toNumber(value) {
 function matchFirst(value, regex, groupIndex) {
   const match = String(value || "").match(regex);
   return match ? match[groupIndex || 0] : "";
+}
+
+class Unbaser {
+  constructor(base) {
+    this.ALPHABET = {
+      62: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      95: "' !\"#$%&\\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'"
+    };
+    this.dictionary = {};
+    this.base = base;
+
+    if (36 < base && base < 62) {
+      this.ALPHABET[base] =
+        this.ALPHABET[base] || this.ALPHABET[62].substr(0, base);
+    }
+
+    if (2 <= base && base <= 36) {
+      this.unbase = function(value) {
+        return parseInt(value, base);
+      };
+    } else {
+      if (!this.ALPHABET[base]) {
+        throw new Error("Unsupported base encoding.");
+      }
+
+      for (let i = 0; i < this.ALPHABET[base].length; i += 1) {
+        this.dictionary[this.ALPHABET[base][i]] = i;
+      }
+
+      this.unbase = this._dictunbaser.bind(this);
+    }
+  }
+
+  _dictunbaser(value) {
+    let result = 0;
+    const chars = String(value || "").split("").reverse();
+
+    for (let i = 0; i < chars.length; i += 1) {
+      result += Math.pow(this.base, i) * this.dictionary[chars[i]];
+    }
+
+    return result;
+  }
+}
+
+function unpack(source) {
+  const args =
+    /}\('(.*)', *(\d+|\[\]), *(\d+), *'(.*)'\.split\('\|'\), *(\d+), *(.*)\)\)/.exec(
+      source
+    ) ||
+    /}\('(.*)', *(\d+|\[\]), *(\d+), *'(.*)'\.split\('\|'\)/.exec(source);
+
+  if (!args) {
+    throw new Error("Could not unpack packed script.");
+  }
+
+  const payload = args[1];
+  const radix = parseInt(args[2], 10);
+  const count = parseInt(args[3], 10);
+  const symtab = args[4].split("|");
+
+  if (count !== symtab.length) {
+    throw new Error("Malformed p.a.c.k.e.r. symtab.");
+  }
+
+  const unbaser = new Unbaser(radix);
+
+  return payload.replace(/\b\w+\b/g, function(word) {
+    const index = radix === 1 ? parseInt(word, 10) : unbaser.unbase(word);
+    return symtab[index] || word;
+  });
 }
