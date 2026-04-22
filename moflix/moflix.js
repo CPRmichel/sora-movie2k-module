@@ -426,9 +426,7 @@ async function moflixFetch(
 
   try {
     return await xhrFetch(url, requestOptions);
-  } catch (error) {
-    console.log("moflixFetch xhr error: " + error.message);
-  }
+  } catch (error) {}
 
   try {
     if (typeof fetch === "function") {
