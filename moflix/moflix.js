@@ -317,73 +317,17 @@ async function moflixFetch(
   };
 
   try {
-    if (typeof XMLHttpRequest !== "undefined") {
-      return await xhrFetch(url, requestOptions);
-    }
-  } catch (error) {
-    console.log("xhrFetch error: " + error.message);
-  }
-
-  try {
-    if (typeof fetchv2 === "function") {
-      return await fetchv2(
-        url,
-        requestOptions.headers,
-        requestOptions.method,
-        requestOptions.body
-      );
-    }
-  } catch (error) {
-    console.log("fetchv2 error: " + error.message);
-  }
-
-  try {
     if (typeof fetch === "function") {
       return await fetch(url, requestOptions);
     }
+    if (typeof fetchv2 === "function") {
+      return await fetchv2(url, requestOptions);
+    }
   } catch (error) {
-    console.log("fetch error: " + error.message);
+    console.log("moflixFetch error: " + error.message);
   }
 
   return null;
-}
-
-async function xhrFetch(url, options) {
-  return await new Promise(function(resolve, reject) {
-    const xhr = new XMLHttpRequest();
-    xhr.open(options.method || "GET", url, true);
-
-    const headers = options.headers || {};
-    const headerKeys = Object.keys(headers);
-    for (let i = 0; i < headerKeys.length; i += 1) {
-      const key = headerKeys[i];
-      xhr.setRequestHeader(key, headers[key]);
-    }
-
-    xhr.onload = function() {
-      resolve({
-        status: xhr.status,
-        ok: xhr.status >= 200 && xhr.status < 300,
-        responseText: xhr.responseText,
-        text: async function() {
-          return xhr.responseText;
-        },
-        json: async function() {
-          return JSON.parse(xhr.responseText);
-        }
-      });
-    };
-
-    xhr.onerror = function() {
-      reject(new Error("XHR request failed"));
-    };
-
-    xhr.ontimeout = function() {
-      reject(new Error("XHR request timed out"));
-    };
-
-    xhr.send(options.body || null);
-  });
 }
 
 async function readResponseText(response) {
