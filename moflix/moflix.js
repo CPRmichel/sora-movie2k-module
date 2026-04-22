@@ -380,6 +380,40 @@ async function fetchHtml(url) {
   return await readResponseText(response);
 }
 
+function xhrFetch(url, options) {
+  return new Promise(function(resolve, reject) {
+    if (typeof XMLHttpRequest !== "function") {
+      reject(new Error("XMLHttpRequest is not available"));
+      return;
+    }
+
+    const xhr = new XMLHttpRequest();
+    xhr.open(options.method || "GET", url, true);
+
+    const headers = options.headers || {};
+    const headerKeys = Object.keys(headers);
+    for (let i = 0; i < headerKeys.length; i += 1) {
+      xhr.setRequestHeader(headerKeys[i], headers[headerKeys[i]]);
+    }
+
+    xhr.onload = function() {
+      resolve({
+        status: xhr.status,
+        responseText: xhr.responseText,
+        text: function() {
+          return Promise.resolve(xhr.responseText);
+        }
+      });
+    };
+
+    xhr.onerror = function() {
+      reject(new Error("XHR request failed"));
+    };
+
+    xhr.send(options.body || null);
+  });
+}
+
 async function moflixFetch(
   url,
   options = { headers: {}, method: "GET", body: null }
@@ -391,14 +425,25 @@ async function moflixFetch(
   };
 
   try {
+    return await xhrFetch(url, requestOptions);
+  } catch (error) {
+    console.log("moflixFetch xhr error: " + error.message);
+  }
+
+  try {
     if (typeof fetch === "function") {
       return await fetch(url, requestOptions);
     }
+  } catch (error) {
+    console.log("moflixFetch fetch error: " + error.message);
+  }
+
+  try {
     if (typeof fetchv2 === "function") {
       return await fetchv2(url, requestOptions);
     }
   } catch (error) {
-    console.log("moflixFetch error: " + error.message);
+    console.log("moflixFetch fetchv2 error: " + error.message);
   }
 
   return null;
@@ -421,6 +466,7 @@ async function readResponseText(response) {
 }
 
 function extractDirectUrlFromHtml(html) {
+  const normalizedHtml = String(html || "");
   const patterns = [
     /https?:\/\/[^"'\\\s]+\.m3u8[^"'\\\s]*/i,
     /https?:\/\/[^"'\\\s]+\.mp4[^"'\\\s]*/i,
@@ -429,7 +475,7 @@ function extractDirectUrlFromHtml(html) {
   ];
 
   for (let i = 0; i < patterns.length; i += 1) {
-    const match = html.match(patterns[i]);
+    const match = normalizedHtml.match(patterns[i]);
     if (!match) {
       continue;
     }
@@ -440,12 +486,16 @@ function extractDirectUrlFromHtml(html) {
     }
   }
 
-  const packedMatch = String(html || "").match(
-    /<script[^>]*>\s*(eval\(function\(p,a,c,k,e,d.*?\))\s*<\/script>/is
-  );
-  if (packedMatch && packedMatch[1]) {
+  const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+  let scriptMatch;
+  while ((scriptMatch = scriptRegex.exec(normalizedHtml)) !== null) {
+    const scriptContent = String(scriptMatch[1] || "").trim();
+    if (scriptContent.indexOf("eval(function(p,a,c,k,e,d") === -1) {
+      continue;
+    }
+
     try {
-      const unpackedScript = unpack(packedMatch[1]);
+      const unpackedScript = unpack(scriptContent);
       for (let i = 0; i < patterns.length; i += 1) {
         const match = unpackedScript.match(patterns[i]);
         if (!match) {
@@ -673,10 +723,12 @@ class Unbaser {
 
 function unpack(source) {
   const args =
-    /}\('(.*)', *(\d+|\[\]), *(\d+), *'(.*)'\.split\('\|'\), *(\d+), *(.*)\)\)/.exec(
+    /}\('([\s\S]*?)', *(\d+|\[\]), *(\d+), *'([\s\S]*?)'\.split\('\|'\), *(\d+), *([\s\S]*?)\)\);?/.exec(
       source
     ) ||
-    /}\('(.*)', *(\d+|\[\]), *(\d+), *'(.*)'\.split\('\|'\)/.exec(source);
+    /}\('([\s\S]*?)', *(\d+|\[\]), *(\d+), *'([\s\S]*?)'\.split\('\|'\)\);?/.exec(
+      source
+    );
 
   if (!args) {
     throw new Error("Could not unpack packed script.");
