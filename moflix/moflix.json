@@ -5,9 +5,9 @@
     "name": "shadowbroker",
     "icon": "https://moflix-stream.xyz/favicon/icon-144x144.png"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "language": "German",
-  "streamType": "MP4",
+  "streamType": "HLS",
   "quality": "1080p",
   "baseUrl": "https://moflix-stream.xyz/",
   "searchBaseUrl": "https://moflix-stream.xyz/search/%s",
