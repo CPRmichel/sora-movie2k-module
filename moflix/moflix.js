@@ -230,6 +230,11 @@ async function resolveMirror(url, depth) {
     return normalizedUrl;
   }
 
+  const vidaraResolvedUrl = await resolveVidaraMirror(normalizedUrl);
+  if (vidaraResolvedUrl) {
+    return vidaraResolvedUrl;
+  }
+
   if (currentDepth >= 2) {
     return normalizedUrl;
   }
@@ -251,6 +256,37 @@ async function resolveMirror(url, depth) {
   }
 
   return normalizedUrl;
+}
+
+async function resolveVidaraMirror(url) {
+  const match = String(url || "").match(
+    /https?:\/\/(?:www\.)?vidara\.(?:to|so)\/e\/([A-Za-z0-9]+)/i
+  );
+  if (!match || !match[1]) {
+    return null;
+  }
+
+  try {
+    const response = await moflixFetch("https://vidara.to/api/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        filecode: match[1],
+        device: "ios"
+      })
+    });
+    const text = await readResponseText(response);
+    const payload = JSON.parse(text);
+    if (payload && payload.streaming_url) {
+      return absolutizeUrl(payload.streaming_url);
+    }
+  } catch (error) {
+    console.log("resolveVidaraMirror error: " + error.message);
+  }
+
+  return null;
 }
 
 function collectWatchVideos(watchPage) {
@@ -530,12 +566,12 @@ function scoreStream(stream) {
     score -= 100;
   }
 
-  if (provider.indexOf("veev") !== -1) {
+  if (provider.indexOf("vidara") !== -1) {
+    score += 90;
+  } else if (provider.indexOf("veev") !== -1) {
     score += 20;
-  } else if (provider.indexOf("vidara") !== -1) {
-    score += 15;
   } else if (provider.indexOf("moflix-stream.click") !== -1) {
-    score += 80;
+    score += 40;
   } else if (provider.indexOf("moflix-stream.link") !== -1) {
     score += 75;
   } else if (provider.indexOf("gupload") !== -1) {
