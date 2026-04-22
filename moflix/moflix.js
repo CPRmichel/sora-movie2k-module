@@ -11,24 +11,51 @@ async function searchResults(keyword) {
       MOFLIX_BASE_URL + "search/" + encodeURIComponent(query)
     );
     const html = await readResponseText(response);
+    const bootstrapData = parseBootstrapData(html) || {};
+    const searchPage = getSearchPage(bootstrapData);
     const results = [];
     const seen = {};
-    const regex =
-      /<a class="contents" href="(\/titles\/[^"]+)"[\s\S]*?<img[^>]+src="([^"]+)"[^>]+alt="Poster for ([^"]+)"/gi;
+    const hrefMap = extractSearchHrefMap(html);
 
-    let match;
-    while ((match = regex.exec(html)) !== null) {
-      const href = absolutizeUrl(match[1]);
-      if (!href || seen[href]) {
-        continue;
+    if (Array.isArray(searchPage.results) && searchPage.results.length) {
+      for (let i = 0; i < searchPage.results.length; i += 1) {
+        const item = searchPage.results[i];
+        if (!item || item.model_type !== "title") {
+          continue;
+        }
+
+        const href = absolutizeUrl(
+          hrefMap[String(item.id)] || buildTitleHref(item)
+        );
+        if (!href || seen[href]) {
+          continue;
+        }
+
+        seen[href] = true;
+        results.push({
+          title: cleanupText(item.name),
+          image: absolutizeUrl(item.poster),
+          href: href
+        });
       }
+    } else {
+      const regex =
+        /<a class="contents" href="(\/titles\/[^"]+)"[\s\S]*?<img[^>]+src="([^"]+)"[^>]+alt="Poster for ([^"]+)"/gi;
 
-      seen[href] = true;
-      results.push({
-        title: cleanupText(decodeHtml(match[3])),
-        image: absolutizeUrl(match[2]),
-        href: href
-      });
+      let match;
+      while ((match = regex.exec(html)) !== null) {
+        const href = absolutizeUrl(match[1]);
+        if (!href || seen[href]) {
+          continue;
+        }
+
+        seen[href] = true;
+        results.push({
+          title: cleanupText(decodeHtml(match[3])),
+          image: absolutizeUrl(match[2]),
+          href: href
+        });
+      }
     }
 
     return JSON.stringify(results);
@@ -278,6 +305,10 @@ function getWatchPage(bootstrapData) {
   return (bootstrapData.loaders && bootstrapData.loaders.watchPage) || {};
 }
 
+function getSearchPage(bootstrapData) {
+  return (bootstrapData.loaders && bootstrapData.loaders.searchPage) || {};
+}
+
 function parseBootstrapData(html) {
   const marker = "window.bootstrapData = ";
   const start = html.indexOf(marker);
@@ -299,6 +330,49 @@ function parseBootstrapData(html) {
     console.log("parseBootstrapData error: " + error.message);
     return null;
   }
+}
+
+function extractSearchHrefMap(html) {
+  const hrefMap = {};
+  const regex = /href="(\/titles\/(\d+)\/[^"]+)"/gi;
+  let match;
+
+  while ((match = regex.exec(html)) !== null) {
+    const href = match[1];
+    const id = match[2];
+    if (!id || hrefMap[id]) {
+      continue;
+    }
+
+    hrefMap[id] = href;
+  }
+
+  return hrefMap;
+}
+
+function buildTitleHref(item) {
+  if (!item || !item.id) {
+    return null;
+  }
+
+  const slugSource = item.name || item.original_title || "";
+  const slug = slugifyTitle(slugSource);
+  return "/titles/" + item.id + (slug ? "/" + slug : "");
+}
+
+function slugifyTitle(value) {
+  return cleanupText(value)
+    .replace(/&/g, " and ")
+    .replace(/['’`]/g, "")
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 async function fetchHtml(url) {
