@@ -11,7 +11,7 @@
   "quality": "1080p",
   "baseUrl": "https://moflix-stream.xyz/",
   "searchBaseUrl": "https://moflix-stream.xyz/search/%s",
-  "scriptUrl": "https://raw.githubusercontent.com/CPRmichel/sora-movie2k-module/main/moflix.js",
+  "scriptUrl": "https://raw.githubusercontent.com/CPRmichel/sora-movie2k-module/main/moflix/moflix.js",
   "asyncJS": true,
   "type": "shows/movies",
   "downloadSupport": false,

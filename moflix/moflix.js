@@ -1,4 +1,4 @@
-const MOFLIX_BASE_URL = "https://moflix-stream.xyz/";
+var MOFLIX_BASE_URL = "https://moflix-stream.xyz/";
 
 async function searchResults(keyword) {
   try {
@@ -7,7 +7,7 @@ async function searchResults(keyword) {
       return JSON.stringify([]);
     }
 
-    const response = await soraFetch(
+    const response = await moflixFetch(
       MOFLIX_BASE_URL + "search/" + encodeURIComponent(query)
     );
     const html = await readResponseText(response);
@@ -208,7 +208,7 @@ async function resolveMirror(url, depth) {
   }
 
   try {
-    const response = await soraFetch(normalizedUrl);
+    const response = await moflixFetch(normalizedUrl);
     const html = await readResponseText(response);
     const directUrl = extractDirectUrlFromHtml(html);
     if (directUrl) {
@@ -302,8 +302,42 @@ function parseBootstrapData(html) {
 }
 
 async function fetchHtml(url) {
-  const response = await soraFetch(stripHash(url));
+  const response = await moflixFetch(stripHash(url));
   return await readResponseText(response);
+}
+
+async function moflixFetch(
+  url,
+  options = { headers: {}, method: "GET", body: null }
+) {
+  const requestOptions = {
+    headers: options.headers || {},
+    method: options.method || "GET",
+    body: options.body || null
+  };
+
+  try {
+    if (typeof fetchv2 === "function") {
+      return await fetchv2(
+        url,
+        requestOptions.headers,
+        requestOptions.method,
+        requestOptions.body
+      );
+    }
+  } catch (error) {
+    console.log("fetchv2 error: " + error.message);
+  }
+
+  try {
+    if (typeof fetch === "function") {
+      return await fetch(url, requestOptions);
+    }
+  } catch (error) {
+    console.log("fetch error: " + error.message);
+  }
+
+  return null;
 }
 
 async function readResponseText(response) {
