@@ -224,20 +224,7 @@ function formatStreamSource(stream) {
   return {
     title: titleParts.join(" - "),
     url: stream.link,
-    streamUrl: stream.link,
-    headers: buildPlaybackHeaders(provider)
-  };
-}
-
-function buildPlaybackHeaders(provider) {
-  const host = String(provider || "").replace(/^https?:\/\//, "").split("/")[0];
-  if (!host || host === "unknown") {
-    return {};
-  }
-
-  return {
-    Origin: "https://" + host,
-    Referer: "https://" + host + "/"
+    streamUrl: stream.link
   };
 }
 
