@@ -202,11 +202,43 @@ async function extractStreamUrl(url) {
     });
 
     console.log("Selected Moflix stream: " + resolved[0].link);
-    return resolved[0].link;
+    return JSON.stringify({
+      streams: resolved.map(formatStreamSource)
+    });
   } catch (error) {
     console.log("extractStreamUrl error: " + error.message);
     return null;
   }
+}
+
+function formatStreamSource(stream) {
+  const titleParts = [];
+  const provider = String(stream.provider || "Moflix");
+  const quality = String(stream.quality || "Unknown");
+
+  titleParts.push(provider);
+  if (quality && quality !== "Unknown") {
+    titleParts.push(quality);
+  }
+
+  return {
+    title: titleParts.join(" - "),
+    url: stream.link,
+    streamUrl: stream.link,
+    headers: buildPlaybackHeaders(provider)
+  };
+}
+
+function buildPlaybackHeaders(provider) {
+  const host = String(provider || "").replace(/^https?:\/\//, "").split("/")[0];
+  if (!host || host === "unknown") {
+    return {};
+  }
+
+  return {
+    Origin: "https://" + host,
+    Referer: "https://" + host + "/"
+  };
 }
 
 function buildGlobalExtractorProviders(videoList) {
