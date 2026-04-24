@@ -602,11 +602,21 @@ async function moflixFetch(
   } catch (error) {}
 
   try {
-    if (typeof fetch === "function") {
-      return await fetch(url, requestOptions);
+    if (typeof fetchv2 === "function" && isLunaRuntime()) {
+      const response = await fetchv2(
+        url,
+        requestOptions.headers,
+        requestOptions.method,
+        requestOptions.body,
+        true,
+        "utf-8"
+      );
+      if (response) {
+        return response;
+      }
     }
   } catch (error) {
-    console.log("moflixFetch fetch error: " + error.message);
+    console.log("moflixFetch fetchv2 luna-style error: " + error.message);
   }
 
   try {
@@ -614,10 +624,22 @@ async function moflixFetch(
       return await fetchv2(url, requestOptions);
     }
   } catch (error) {
-    console.log("moflixFetch fetchv2 error: " + error.message);
+    console.log("moflixFetch fetchv2 options-style error: " + error.message);
+  }
+
+  try {
+    if (typeof fetch === "function") {
+      return await fetch(url, requestOptions.headers);
+    }
+  } catch (error) {
+    console.log("moflixFetch fetch error: " + error.message);
   }
 
   return null;
+}
+
+function isLunaRuntime() {
+  return typeof fetchV2Native === "function" || typeof fetchNative === "function";
 }
 
 async function readResponseText(response) {
