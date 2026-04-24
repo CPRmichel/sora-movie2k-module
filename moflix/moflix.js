@@ -171,19 +171,26 @@ async function extractStreamUrl(url) {
       return null;
     }
 
-    const resolved = [];
-    for (let i = 0; i < videoList.length; i += 1) {
-      const video = videoList[i];
-      const resolvedUrl = await resolveMirror(video.src);
-      if (!resolvedUrl) {
-        continue;
-      }
+    const providers = buildGlobalExtractorProviders(videoList);
+    const resolved = await moflixMultiExtractor(providers);
+    if (!resolved.length) {
+      for (let i = 0; i < videoList.length; i += 1) {
+        const video = videoList[i];
+        const resolvedUrl = await resolveMirror(video.src);
+        if (!resolvedUrl) {
+          continue;
+        }
 
-      resolved.push({
-        provider: detectProvider(video.src),
-        quality: video.quality || "Unknown",
-        link: resolvedUrl
-      });
+        if (hasStream(resolved, resolvedUrl)) {
+          continue;
+        }
+
+        resolved.push({
+          provider: detectProvider(video.src),
+          quality: video.quality || "Unknown",
+          link: resolvedUrl
+        });
+      }
     }
 
     if (!resolved.length) {
@@ -200,6 +207,117 @@ async function extractStreamUrl(url) {
     console.log("extractStreamUrl error: " + error.message);
     return null;
   }
+}
+
+function buildGlobalExtractorProviders(videoList) {
+  const providers = {};
+
+  for (let i = 0; i < videoList.length; i += 1) {
+    const src = absolutizeUrl(videoList[i] && videoList[i].src);
+    if (!src) {
+      continue;
+    }
+
+    const provider = mapMoflixProvider(src);
+    providers[src] = provider;
+  }
+
+  return providers;
+}
+
+function mapMoflixProvider(url) {
+  const host = detectProvider(url);
+
+  if (host.indexOf("vidara.") !== -1) {
+    return "vidara";
+  }
+
+  if (host.indexOf("moflix-stream.click") !== -1 || host.indexOf("moflix-stream.link") !== -1) {
+    return "packer-Moflix";
+  }
+
+  if (host.indexOf("veev.") !== -1) {
+    return "veev";
+  }
+
+  if (host.indexOf("gupload.") !== -1) {
+    return "gupload";
+  }
+
+  if (host.indexOf("upns.") !== -1) {
+    return "skip";
+  }
+
+  if (host.indexOf("rpmplay.") !== -1) {
+    return "skip";
+  }
+
+  if (isDirectMediaUrl(url)) {
+    return "direct";
+  }
+
+  return host || "unknown";
+}
+
+async function moflixMultiExtractor(providers) {
+  const streams = [];
+
+  for (const url in providers) {
+    if (!Object.prototype.hasOwnProperty.call(providers, url)) {
+      continue;
+    }
+
+    const providerValue = providers[url];
+    const provider = String(providerValue || "").split("-")[0];
+
+    try {
+      const streamUrl = await extractByGlobalProvider(url, provider);
+      if (!streamUrl || hasStream(streams, streamUrl)) {
+        continue;
+      }
+
+      streams.push({
+        provider: detectProvider(url),
+        quality: "Unknown",
+        link: streamUrl
+      });
+    } catch (error) {
+      console.log("moflixMultiExtractor " + provider + " error: " + error.message);
+    }
+  }
+
+  return streams;
+}
+
+async function extractByGlobalProvider(url, provider) {
+  if (provider === "skip") {
+    return null;
+  }
+
+  if (provider === "direct") {
+    return isDirectMediaUrl(url) ? url : null;
+  }
+
+  if (provider === "vidara") {
+    return await resolveVidaraMirror(url);
+  }
+
+  if (provider === "packer") {
+    const html = await fetchHtml(url);
+    return extractDirectUrlFromHtml(html);
+  }
+
+  return null;
+}
+
+function hasStream(streams, link) {
+  for (let i = 0; i < streams.length; i += 1) {
+    if (streams[i] && streams[i].link === link) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function ensureWatchUrl(url) {
