@@ -5,7 +5,7 @@
     "name": "shadowbroker",
     "icon": "https://moflix-stream.xyz/favicon/icon-144x144.png"
   },
-  "version": "0.1.4",
+  "version": "0.1.5",
   "language": "German",
   "streamType": "HLS",
   "quality": "1080p",
@@ -18,6 +18,5 @@
   "supportsSora": true,
   "supportsLuna": true,
   "supportsTsumi": true,
-  "supportsHiyoku": true,
-  "note": "Search, movie details, series episodes and watch-page mirrors for Moflix."
+  "supportsHiyoku": true
 }

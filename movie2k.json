@@ -5,7 +5,7 @@
     "name": "shadowbroker",
     "icon": "https://movie2k.cx/img/favicon.png"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "language": "German",
   "streamType": "MP4",
   "quality": "1080p - 720p - DVD - CAM",
@@ -18,6 +18,5 @@
   "supportsSora": true,
   "supportsLuna": true,
   "supportsTsumi": true,
-  "supportsHiyoku": true,
-  "note": "Supports movies and TV shows."
+  "supportsHiyoku": true
 }
