@@ -1,11 +1,11 @@
 {
   "sourceName": "Movie2k",
-  "iconUrl": "https://movie2k.cx/img/favicon.png",
+  "iconUrl": "https://favicon.im/movie2k.cx?larger=true",
   "author": {
     "name": "shadowbroker",
-    "icon": "https://movie2k.cx/img/favicon.png"
+    "icon": "https://favicon.im/movie2k.cx?larger=true"
   },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "language": "German",
   "streamType": "MP4",
   "quality": "1080p - 720p - DVD - CAM",

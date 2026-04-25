@@ -1,11 +1,11 @@
 {
   "sourceName": "Moflix",
-  "iconUrl": "https://moflix-stream.xyz/favicon/icon-144x144.png",
+  "iconUrl": "https://favicon.im/moflix-stream.xyz?larger=true",
   "author": {
     "name": "shadowbroker",
-    "icon": "https://moflix-stream.xyz/favicon/icon-144x144.png"
+    "icon": "https://favicon.im/moflix-stream.xyz?larger=true"
   },
-  "version": "0.1.5",
+  "version": "0.1.6",
   "language": "German",
   "streamType": "HLS",
   "quality": "1080p",
