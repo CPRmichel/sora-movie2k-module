@@ -5,10 +5,10 @@
     "name": "shadowbroker",
     "icon": "https://favicon.im/kinoger.com?larger=true"
   },
-  "version": "0.1.5",
+  "version": "0.1.6",
   "language": "German",
   "streamType": "MP4",
-  "quality": "HD+ - HD",
+  "quality": "1080p",
   "baseUrl": "https://kinoger.com/",
   "searchBaseUrl": "https://kinoger.com/index.php?do=search&subaction=search&titleonly=3&story=%s",
   "scriptUrl": "https://raw.githubusercontent.com/CPRmichel/sora-movie2k-module/main/kinoger/kinoger.js",
