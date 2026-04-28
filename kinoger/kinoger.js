@@ -825,7 +825,11 @@ async function kinogerFetch(url, options) {
 
   try {
     if (typeof fetch === "function") {
-      return await fetch(url, requestOptions);
+      if (requestOptions.method !== "GET" || requestOptions.body) {
+        return await fetch(url, requestOptions);
+      }
+
+      return await fetch(url, requestOptions.headers);
     }
   } catch (error) {
     console.log("kinogerFetch fetch error: " + error.message);
