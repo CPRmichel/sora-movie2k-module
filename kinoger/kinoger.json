@@ -5,9 +5,9 @@
     "name": "shadowbroker",
     "icon": "https://favicon.im/kinoger.com?larger=true"
   },
-  "version": "0.1.0",
+  "version": "0.1.2",
   "language": "German",
-  "streamType": "Embed",
+  "streamType": "MP4",
   "quality": "HD+ - HD",
   "baseUrl": "https://kinoger.com/",
   "searchBaseUrl": "https://kinoger.com/index.php?do=search&subaction=search&titleonly=3&story=%s",

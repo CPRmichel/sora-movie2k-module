@@ -104,11 +104,39 @@ async function extractStreamUrl(url) {
     var episode = toNumber(getHashParam(parts.hash, "episode")) || 1;
     var html = await fetchHtml(parts.base);
     var playerCalls = parsePlayerCalls(html);
-    var streams = selectStreams(playerCalls, season, episode, isSeriesPage(html, playerCalls));
+    var embedStreams = selectStreams(playerCalls, season, episode, isSeriesPage(html, playerCalls));
+    var streams = [];
+    var seen = {};
+
+    for (var i = 0; i < embedStreams.length; i += 1) {
+      var embedStream = embedStreams[i];
+      var resolved = await resolveEmbedStreams(embedStream.link, embedStream.provider);
+
+      for (var j = 0; j < resolved.length; j += 1) {
+        var media = resolved[j];
+        if (!media || !media.url || seen[media.url]) {
+          continue;
+        }
+
+        seen[media.url] = true;
+        streams.push(
+          formatResolvedStream(
+            embedStream.provider,
+            media.url,
+            media.quality || embedStream.quality,
+            embedStream.link
+          )
+        );
+      }
+    }
 
     if (!streams.length) {
       return null;
     }
+
+    streams.sort(function(a, b) {
+      return scoreStream(b) - scoreStream(a);
+    });
 
     return JSON.stringify({
       streams: streams
@@ -269,6 +297,164 @@ function formatStream(providerKey, link) {
     url: link,
     streamUrl: link
   };
+}
+
+function formatResolvedStream(provider, link, quality, referer) {
+  var cleanProvider = provider || detectProvider(link) || "Kinoger";
+  var cleanQuality = quality || detectQuality(link) || "Unknown";
+  var titleParts = [cleanProvider];
+  var headers = {};
+  var origin = getOrigin(referer);
+
+  if (cleanQuality && cleanQuality !== "Unknown") {
+    titleParts.push(cleanQuality);
+  }
+
+  if (referer) {
+    headers.Referer = referer;
+  }
+
+  if (origin) {
+    headers.Origin = origin;
+  }
+
+  return {
+    provider: cleanProvider,
+    quality: cleanQuality,
+    link: link,
+    title: titleParts.join(" - "),
+    url: link,
+    streamUrl: link,
+    headers: headers
+  };
+}
+
+async function resolveEmbedStreams(url, provider) {
+  var normalizedUrl = normalizeEmbedUrl(url);
+  var directMedia = [];
+
+  if (!normalizedUrl) {
+    return directMedia;
+  }
+
+  if (isDirectMediaUrl(normalizedUrl)) {
+    directMedia.push({
+      url: normalizedUrl,
+      quality: detectQuality(normalizedUrl)
+    });
+    return directMedia;
+  }
+
+  try {
+    var response = await kinogerFetch(normalizedUrl, {
+      headers: {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+        "Referer": KINOGER_BASE_URL
+      }
+    });
+    var html = await readResponseText(response);
+    var mediaSources = extractMediaSources(html, normalizedUrl);
+
+    if (mediaSources.length) {
+      return mediaSources;
+    }
+
+    var iframeUrl = absolutizeAgainst(
+      matchFirst(html, /<iframe[^>]+src=["']([^"']+)["']/i, 1),
+      normalizedUrl
+    );
+    if (iframeUrl && iframeUrl !== normalizedUrl) {
+      var iframeResponse = await kinogerFetch(iframeUrl, {
+        headers: {
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+          "Referer": normalizedUrl
+        }
+      });
+      return extractMediaSources(await readResponseText(iframeResponse), iframeUrl);
+    }
+  } catch (error) {
+    console.log("resolveEmbedStreams " + provider + " error: " + error.message);
+  }
+
+  return directMedia;
+}
+
+function extractMediaSources(html, baseUrl) {
+  var source = String(html || "");
+  var results = [];
+  var seen = {};
+  var fileRegex = /\b(?:file|src|source)\s*:\s*(["'])([\s\S]*?)\1/gi;
+  var match;
+
+  while ((match = fileRegex.exec(source)) !== null) {
+    addMediaSources(results, seen, parseMediaList(match[2], baseUrl));
+  }
+
+  var sourceRegex = /<source[^>]+src=["']([^"']+)["'][^>]*>/gi;
+  while ((match = sourceRegex.exec(source)) !== null) {
+    addMediaSources(results, seen, parseMediaList(match[1], baseUrl));
+  }
+
+  var directRegex = /(https?:\/\/[^"'\s\\,]+?\.(?:m3u8|mp4)(?:\/|\?[^"'\s\\,]*)?)/gi;
+  while ((match = directRegex.exec(source)) !== null) {
+    addMediaSources(results, seen, [
+      {
+        url: cleanMediaUrl(match[1], baseUrl),
+        quality: detectQuality(match[1])
+      }
+    ]);
+  }
+
+  results.sort(function(a, b) {
+    return scoreQuality(b.quality, b.url) - scoreQuality(a.quality, a.url);
+  });
+
+  return results;
+}
+
+function parseMediaList(value, baseUrl) {
+  var raw = decodeJsString(decodeHtml(value || ""));
+  var parts = raw.split(",");
+  var results = [];
+
+  for (var i = 0; i < parts.length; i += 1) {
+    var part = cleanupText(parts[i]);
+    var quality = "";
+    var labeledMatch = part.match(/^\[([^\]]+)\]\s*(.+)$/);
+
+    if (labeledMatch) {
+      quality = cleanupText(labeledMatch[1]);
+      part = labeledMatch[2];
+    }
+
+    var directMatch = part.match(/(https?:\/\/\S+?\.(?:m3u8|mp4)(?:\/|\?\S*)?)/i);
+    var directUrl = cleanMediaUrl(directMatch ? directMatch[1] : part, baseUrl);
+
+    if (!directUrl || !isDirectMediaUrl(directUrl)) {
+      continue;
+    }
+
+    results.push({
+      url: directUrl,
+      quality: quality || detectQuality(directUrl)
+    });
+  }
+
+  return results;
+}
+
+function addMediaSources(results, seen, sources) {
+  for (var i = 0; i < sources.length; i += 1) {
+    var source = sources[i];
+    if (!source || !source.url || seen[source.url] || !isDirectMediaUrl(source.url)) {
+      continue;
+    }
+
+    seen[source.url] = true;
+    results.push(source);
+  }
 }
 
 function buildEpisodeMap(playerCalls) {
@@ -744,6 +930,21 @@ function normalizeEmbedUrl(url) {
   return absolutizeUrl(cleanupText(url));
 }
 
+function isDirectMediaUrl(url) {
+  var value = String(url || "").toLowerCase();
+  return value.indexOf(".m3u8") !== -1 || value.indexOf(".mp4") !== -1;
+}
+
+function cleanMediaUrl(url, baseUrl) {
+  var value = decodeHtml(decodeJsString(String(url || "")))
+    .replace(/\\\//g, "/")
+    .replace(/^[\s"']+|[\s"']+$/g, "")
+    .replace(/[)\]}]+$/g, "")
+    .trim();
+
+  return absolutizeAgainst(value, baseUrl);
+}
+
 function absolutizeUrl(url) {
   var value = String(url || "").trim();
   if (!value) {
@@ -763,6 +964,66 @@ function absolutizeUrl(url) {
   }
 
   return KINOGER_BASE_URL + value.replace(/^\/+/, "");
+}
+
+function absolutizeAgainst(url, baseUrl) {
+  var value = String(url || "").trim();
+  var base = String(baseUrl || KINOGER_BASE_URL);
+  var origin = getOrigin(base) || KINOGER_BASE_URL.replace(/\/+$/, "");
+  var pathBase = base.split("#")[0].split("?")[0];
+
+  if (!value) {
+    return "";
+  }
+
+  if (value.indexOf("http://") === 0 || value.indexOf("https://") === 0) {
+    return value;
+  }
+
+  if (value.indexOf("//") === 0) {
+    return "https:" + value;
+  }
+
+  if (value.charAt(0) === "/") {
+    return origin + value;
+  }
+
+  return pathBase.replace(/\/[^\/]*$/, "/") + value;
+}
+
+function getOrigin(url) {
+  var match = String(url || "").match(/^(https?:\/\/[^\/]+)/i);
+  return match ? match[1] : "";
+}
+
+function detectQuality(value) {
+  var match = String(value || "").match(/(?:^|[_\-\[\s\/])(\d{3,4})p(?:\]|[_\-\s\/.]|$)/i);
+  return match ? match[1] + "p" : "Unknown";
+}
+
+function scoreStream(stream) {
+  return scoreQuality(stream && stream.quality, stream && (stream.link || stream.url || stream.streamUrl));
+}
+
+function scoreQuality(quality, url) {
+  var score = 0;
+  var qualityText = String(quality || "");
+  var qualityMatch = qualityText.match(/(\d{3,4})p/i);
+  var link = String(url || "").toLowerCase();
+
+  if (qualityMatch) {
+    score += parseInt(qualityMatch[1], 10);
+  }
+
+  if (link.indexOf(".m3u8") !== -1) {
+    score += 20;
+  }
+
+  if (link.indexOf(".mp4") !== -1) {
+    score += 10;
+  }
+
+  return score;
 }
 
 function splitHash(url) {
