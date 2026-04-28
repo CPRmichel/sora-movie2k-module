@@ -85,7 +85,8 @@ async function extractEpisodes(url) {
       for (var episode = 1; episode <= episodeCount; episode += 1) {
         episodes.push({
           href: cleanUrl + "#season=" + season + "&episode=" + episode,
-          number: "S" + padNumber(season) + "E" + padNumber(episode)
+          number: episode,
+          title: "S" + padNumber(season) + "E" + padNumber(episode)
         });
       }
     }
@@ -137,6 +138,10 @@ async function extractStreamUrl(url) {
     streams.sort(function(a, b) {
       return scoreStream(b) - scoreStream(a);
     });
+
+    if (!isLunaRuntime()) {
+      return streams[0].streamUrl || streams[0].url || streams[0].link;
+    }
 
     return JSON.stringify({
       streams: streams
@@ -851,6 +856,10 @@ async function kinogerFetch(url, options) {
   }
 
   return null;
+}
+
+function isLunaRuntime() {
+  return typeof fetchNative === "function" || typeof fetchV2Native === "function";
 }
 
 async function readResponseText(response) {
