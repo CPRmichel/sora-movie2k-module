@@ -303,19 +303,10 @@ function formatResolvedStream(provider, link, quality, referer) {
   var cleanProvider = provider || detectProvider(link) || "Kinoger";
   var cleanQuality = quality || detectQuality(link) || "Unknown";
   var titleParts = [cleanProvider];
-  var headers = {};
-  var origin = getOrigin(referer);
+  var headers = buildPlaybackHeaders(link, referer);
 
   if (cleanQuality && cleanQuality !== "Unknown") {
     titleParts.push(cleanQuality);
-  }
-
-  if (referer) {
-    headers.Referer = referer;
-  }
-
-  if (origin) {
-    headers.Origin = origin;
   }
 
   return {
@@ -327,6 +318,30 @@ function formatResolvedStream(provider, link, quality, referer) {
     streamUrl: link,
     headers: headers
   };
+}
+
+function buildPlaybackHeaders(link, referer) {
+  var host = detectProvider(link);
+
+  if (host.indexOf("incvideo") !== -1 || host.indexOf("filevideo") !== -1) {
+    return {
+      "Referer": "",
+      "Origin": ""
+    };
+  }
+
+  var headers = {};
+  var origin = getOrigin(referer);
+
+  if (referer) {
+    headers.Referer = referer;
+  }
+
+  if (origin) {
+    headers.Origin = origin;
+  }
+
+  return headers;
 }
 
 async function resolveEmbedStreams(url, provider) {
