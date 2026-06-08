@@ -10,15 +10,58 @@ async function searchResults(keyword) {
       return JSON.stringify([]);
     }
 
-    var response = await kinogerFetch(KINOGER_SEARCH_URL + encodeURIComponent(query));
-    var html = await readResponseText(response);
-    var results = parseSearchResults(html);
+    var results = await searchKinogerQuery(query);
+    var fallbacks = buildSearchFallbacks(query);
+
+    for (var i = 0; i < fallbacks.length && !results.length; i += 1) {
+      results = await searchKinogerQuery(fallbacks[i]);
+    }
+
+    console.log("Kinoger search '" + query + "' returned " + results.length + " result(s)");
 
     return JSON.stringify(results);
   } catch (error) {
     console.log("searchResults error: " + error.message);
     return JSON.stringify([]);
   }
+}
+
+async function searchKinogerQuery(query) {
+  var response = await kinogerFetch(KINOGER_SEARCH_URL + encodeURIComponent(query));
+  var html = await readResponseText(response);
+  return parseSearchResults(html);
+}
+
+function buildSearchFallbacks(query) {
+  var cleaned = cleanupText(query)
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\b(?:19|20)\d{2}\b/g, " ")
+    .replace(/[–—:|]+/g, " - ");
+  var candidates = [];
+  var parts = cleaned.split(/\s+-\s+/);
+
+  addSearchFallback(candidates, cleaned);
+
+  for (var i = 0; i < parts.length; i += 1) {
+    addSearchFallback(candidates, parts[i]);
+  }
+
+  if (parts.length > 1) {
+    addSearchFallback(candidates, parts[parts.length - 1]);
+  }
+
+  return candidates.filter(function(item) {
+    return item && item !== query;
+  });
+}
+
+function addSearchFallback(candidates, value) {
+  var normalized = cleanupText(value);
+  if (normalized.length < 3 || candidates.indexOf(normalized) !== -1) {
+    return;
+  }
+
+  candidates.push(normalized);
 }
 
 async function extractDetails(url) {
