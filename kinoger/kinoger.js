@@ -2,6 +2,15 @@ var KINOGER_BASE_URL = "https://kinoger.ch/";
 var KINOGER_SEARCH_URL =
   "https://kinoger.ch/index.php?do=search&subaction=search&titleonly=3&story=";
 var KINOGER_PLAYER_PROVIDERS = ["pw", "fsst", "go", "ollhd"];
+var KINOGER_DEFAULT_HEADERS = {
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+  "Cache-Control": "no-cache",
+  "Pragma": "no-cache",
+  "Referer": KINOGER_BASE_URL,
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 15.2; rv:147.0) Gecko/20100101 Firefox/147.0"
+};
 
 async function searchResults(keyword) {
   try {
@@ -29,7 +38,22 @@ async function searchResults(keyword) {
 async function searchKinogerQuery(query) {
   var response = await kinogerFetch(KINOGER_SEARCH_URL + encodeURIComponent(query));
   var html = await readResponseText(response);
-  return parseSearchResults(html);
+  var results = parseSearchResults(html);
+
+  console.log(
+    "Kinoger query '" +
+      query +
+      "' status=" +
+      (response && response.status ? response.status : "unknown") +
+      " html=" +
+      String(html || "").length +
+      " titlecontrol=" +
+      countMatches(html, /<div\s+class=["']titlecontrol["'][^>]*>/gi) +
+      " results=" +
+      results.length
+  );
+
+  return results;
 }
 
 function buildSearchFallbacks(query) {
@@ -62,6 +86,17 @@ function addSearchFallback(candidates, value) {
   }
 
   candidates.push(normalized);
+}
+
+function countMatches(value, regex) {
+  var source = String(value || "");
+  var count = 0;
+
+  while (regex.exec(source) !== null) {
+    count += 1;
+  }
+
+  return count;
 }
 
 async function extractDetails(url) {
@@ -847,11 +882,9 @@ function xhrFetch(url, options) {
 }
 
 async function kinogerFetch(url, options) {
+  var headers = mergeHeaders(KINOGER_DEFAULT_HEADERS, (options && options.headers) || {});
   var requestOptions = {
-    headers: (options && options.headers) || {
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "de-DE,de;q=0.9,en;q=0.8"
-    },
+    headers: headers,
     method: (options && options.method) || "GET",
     body: (options && options.body) || null
   };
@@ -901,6 +934,23 @@ async function kinogerFetch(url, options) {
   return null;
 }
 
+function mergeHeaders(defaults, overrides) {
+  var merged = {};
+  var defaultKeys = Object.keys(defaults || {});
+  var overrideKeys = Object.keys(overrides || {});
+  var i;
+
+  for (i = 0; i < defaultKeys.length; i += 1) {
+    merged[defaultKeys[i]] = defaults[defaultKeys[i]];
+  }
+
+  for (i = 0; i < overrideKeys.length; i += 1) {
+    merged[overrideKeys[i]] = overrides[overrideKeys[i]];
+  }
+
+  return merged;
+}
+
 function isLunaRuntime() {
   return typeof fetchNative === "function" || typeof fetchV2Native === "function";
 }
@@ -916,6 +966,14 @@ async function readResponseText(response) {
 
   if (typeof response.responseText === "string") {
     return response.responseText;
+  }
+
+  if (typeof response.body === "string") {
+    return response.body;
+  }
+
+  if (typeof response._data === "string") {
+    return response._data;
   }
 
   return String(response);
