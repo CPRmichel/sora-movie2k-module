@@ -1,6 +1,6 @@
-var KINOGER_BASE_URL = "https://kinoger.com/";
+var KINOGER_BASE_URL = "https://kinoger.ch/";
 var KINOGER_SEARCH_URL =
-  "https://kinoger.com/index.php?do=search&subaction=search&titleonly=3&story=";
+  "https://kinoger.ch/index.php?do=search&subaction=search&titleonly=3&story=";
 var KINOGER_PLAYER_PROVIDERS = ["pw", "fsst", "go", "ollhd"];
 
 async function searchResults(keyword) {
@@ -164,7 +164,7 @@ function parseSearchResults(html) {
       itemHtml = itemHtml.slice(0, endIndex);
     }
 
-    var linkMatch = itemHtml.match(/<a[^>]+href=["']((?:https?:\/\/(?:www\.)?kinoger\.com)?\/stream\/[^"']+\.html)["'][^>]*>([\s\S]*?)<\/a>/i);
+    var linkMatch = itemHtml.match(/<a[^>]+href=["']((?:https?:\/\/(?:www\.)?kinoger\.[a-z]+)?\/stream\/[^"']+\.html)["'][^>]*>([\s\S]*?)<\/a>/i);
     if (!linkMatch) {
       continue;
     }
