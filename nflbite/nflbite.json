@@ -1,0 +1,20 @@
+{
+  "sourceName": "NFLBite",
+  "author": { "name": "Michel Etzbach", "icon": "https://www.nflbite.is/nflbite.png" },
+  "iconUrl": "https://www.nflbite.is/nflbite.png",
+  "version": "0.1.0",
+  "language": "English",
+  "baseUrl": "https://www.nflbite.is/",
+  "streamType": "HLS",
+  "quality": "Varies by provider",
+  "searchBaseUrl": "https://www.nflbite.is/",
+  "scriptUrl": "https://raw.githubusercontent.com/CPRmichel/sora-movie2k-module/main/nflbite/nflbite.js",
+  "softsub": false,
+  "multiStream": true,
+  "multiSubs": false,
+  "type": "live",
+  "settings": false,
+  "asyncJS": true,
+  "downloadSupport": false,
+  "supportsLuna": true
+}

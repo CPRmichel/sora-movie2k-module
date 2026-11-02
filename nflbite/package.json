@@ -1,0 +1,24 @@
+{
+  "name": "luna-nflbite-module",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "test:live": "npm run build && node scripts/live-test.mjs",
+    "test:server": "node scripts/test-server.mjs",
+    "serve": "node scripts/serve.mjs",
+    "test:jsc": "npm run build && node scripts/jsc-test.mjs"
+  },
+  "devDependencies": {
+    "acorn": "^8.15.0",
+    "acorn-walk": "^8.3.4",
+    "base64-js": "^1.5.1",
+    "css-select": "^6.0.0",
+    "domutils": "^3.2.2",
+    "esbuild": "^0.25.0",
+    "htmlparser2": "^10.0.0",
+    "url-parse": "^1.5.10"
+  }
+}
